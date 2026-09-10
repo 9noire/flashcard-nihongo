@@ -82,6 +82,10 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
     setSessionCompleted(false);
   }, [selectedLesson, startNo, endNo, isShuffled]);
 
+  useEffect(() => {
+    setIsFlipped(false);
+  }, [currentIndex]);
+
   const currentCard = activeDeckCards[currentIndex];
 
   const playAudio = (text: string) => {

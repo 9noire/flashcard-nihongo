@@ -225,7 +225,7 @@ export const ImportSection: React.FC<ImportSectionProps> = ({ onImportSuccess })
                   type="url"
                   value={driveUrl}
                   onChange={(e) => setDriveUrl(e.target.value)}
-                  placeholder="Tempelkan link PDF Kotoba Google Drive"
+                  placeholder="Tempelkan link Bab Kotoba"
                   className="h-9 text-xs"
                 />
                 <Button
