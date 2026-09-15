@@ -34,6 +34,7 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
   const [endNo, setEndNo] = useState<number>(100);
   const [frontView, setFrontView] = useState<'kana' | 'kanji' | 'arti'>('kana');
   const [isShuffled, setIsShuffled] = useState(false);
+  const [shuffleKey, setShuffleKey] = useState(0);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -74,28 +75,19 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
     }
 
     return filtered;
-  }, [kotobaList, selectedLesson, startNo, endNo, isShuffled]);
+  }, [kotobaList, selectedLesson, startNo, endNo, isShuffled, shuffleKey]);
 
   useEffect(() => {
     setCurrentIndex(0);
     setIsFlipped(false);
     setSessionCompleted(false);
-  }, [selectedLesson, startNo, endNo, isShuffled]);
+  }, [selectedLesson, startNo, endNo, isShuffled, shuffleKey]);
 
   useEffect(() => {
     setIsFlipped(false);
   }, [currentIndex]);
 
   const currentCard = activeDeckCards[currentIndex];
-
-  const playAudio = (text: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    utterance.rate = 0.85;
-    window.speechSynthesis.speak(utterance);
-  };
 
   const handleNext = () => {
     if (currentIndex < activeDeckCards.length - 1) {
@@ -114,6 +106,9 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
   };
 
   const handleRestart = () => {
+    if (isShuffled) {
+      setShuffleKey((prev) => prev + 1);
+    }
     setCurrentIndex(0);
     setIsFlipped(false);
     setSessionCompleted(false);
@@ -162,16 +157,11 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
       } else if (e.code === 'ArrowRight' || e.key === '2') {
         e.preventDefault();
         handleNext();
-      } else if (e.code === 'ArrowDown' || e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        if (currentCard) {
-          playAudio(currentCard.kana || currentCard.kanji || '');
-        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentCard, currentIndex, activeDeckCards.length]);
+  }, [currentIndex, activeDeckCards.length]);
 
   return (
     <>
@@ -288,7 +278,6 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
               isFlipped={isFlipped}
               setIsFlipped={setIsFlipped}
               frontView={frontView}
-              playAudio={playAudio}
               onNext={handleNext}
               onPrev={handlePrev}
               size="default"
@@ -319,7 +308,6 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
         isFlipped={isFlipped}
         setIsFlipped={setIsFlipped}
         frontView={frontView}
-        playAudio={playAudio}
         onNext={handleNext}
         onPrev={handlePrev}
         sessionCompleted={sessionCompleted}

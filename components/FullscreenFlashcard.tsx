@@ -16,7 +16,6 @@ interface FullscreenFlashcardProps {
   isFlipped: boolean;
   setIsFlipped: React.Dispatch<React.SetStateAction<boolean>>;
   frontView: 'kana' | 'kanji' | 'arti';
-  playAudio: (text: string) => void;
   onNext: () => void;
   onPrev: () => void;
   sessionCompleted?: boolean;
@@ -31,7 +30,6 @@ export const FullscreenFlashcard: React.FC<FullscreenFlashcardProps> = ({
   isFlipped,
   setIsFlipped,
   frontView,
-  playAudio,
   onNext,
   onPrev,
   sessionCompleted,
@@ -84,7 +82,6 @@ export const FullscreenFlashcard: React.FC<FullscreenFlashcardProps> = ({
           isFlipped={isFlipped}
           setIsFlipped={setIsFlipped}
           frontView={frontView}
-          playAudio={playAudio}
           onNext={onNext}
           onPrev={onPrev}
           size="large"

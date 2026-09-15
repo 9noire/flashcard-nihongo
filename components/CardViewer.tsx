@@ -16,7 +16,6 @@ export interface CardViewerProps {
   isFlipped: boolean;
   setIsFlipped: React.Dispatch<React.SetStateAction<boolean>>;
   frontView: 'kana' | 'kanji' | 'arti';
-  playAudio: (text: string) => void;
   onNext: () => void;
   onPrev: () => void;
   size?: 'default' | 'large';
@@ -31,7 +30,6 @@ export const CardViewer: React.FC<CardViewerProps> = ({
   isFlipped,
   setIsFlipped,
   frontView,
-  playAudio,
   onNext,
   onPrev,
   size = 'default',
