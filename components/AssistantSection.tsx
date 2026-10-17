@@ -53,6 +53,15 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-resize textarea height when typing or adding newlines via Shift+Enter
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const newHeight = Math.min(Math.max(textareaRef.current.scrollHeight, 36), 160);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [inputMessage]);
+
   // Scroll to bottom on new message
   useEffect(() => {
     if (isOpen) {
@@ -74,6 +83,9 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInputMessage('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '36px';
+    }
     setIsLoading(true);
 
     try {
@@ -330,7 +342,7 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
 
           {/* Input Chat Box */}
           <div className="p-3 bg-zinc-950 border-t border-zinc-800/60">
-            <div className="relative flex items-center gap-2">
+            <div className="relative flex items-end gap-2">
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -339,7 +351,7 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="Ketik pertanyaan..."
                 disabled={isLoading}
-                className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900/80 px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] focus:border-[#EEAAC0]/50 transition-all max-h-28 disabled:opacity-50"
+                className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900/80 px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] focus:border-[#EEAAC0]/50 transition-[border,box-shadow] min-h-[36px] max-h-40 overflow-y-auto leading-relaxed disabled:opacity-50"
               />
 
               <Button
