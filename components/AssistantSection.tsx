@@ -284,7 +284,7 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
       {isOpen && (
         <CardContent className="p-0 flex flex-col">
           {/* Chat Messages Log */}
-          <div className="p-4 space-y-3 max-h-[360px] min-h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800">
+          <div className="p-4 space-y-3 max-h-[360px] min-h-[160px] overflow-y-auto no-scrollbar">
             {messages.map((msg) => {
               const isAssistant = msg.role === 'assistant';
               return (
@@ -351,7 +351,7 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="Ketik pertanyaan..."
                 disabled={isLoading}
-                className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900/80 px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] focus:border-[#EEAAC0]/50 transition-[border,box-shadow] min-h-[36px] max-h-40 overflow-y-auto leading-relaxed disabled:opacity-50"
+                className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900/80 px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] focus:border-[#EEAAC0]/50 transition-[border,box-shadow] min-h-[36px] max-h-40 overflow-y-auto no-scrollbar leading-relaxed disabled:opacity-50"
               />
 
               <Button
