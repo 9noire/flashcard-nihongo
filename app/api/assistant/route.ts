@@ -49,8 +49,8 @@ PANDUAN MENJAWAB:
    - Buatkan kuis yang menyenangkan dan interaktif (misal: tebak arti, pilih jawaban, atau melengkapi kalimat).
    - Tunggu jawaban dari pengguna sebelum memberikan jawaban atau pembahasannya.
 4. Jika pengguna bertanya tentang tata bahasa (bunpou) atau partikel (wa, ga, o, ni, de, dll) yang berhubungan dengan kosakata tersebut, jelaskan dengan ringkas, padat, dan mudah dimengerti.
-5. Gunakan bahasa Indonesia yang santun, bersahabat, dan semangati pengguna (misal: "がんばってください! (Ganbatte kudasai!)").
-6. Format teks menggunakan Markdown yang rapi (bold, bullet points, list) agar nyaman dibaca di layar perangkat seluler maupun desktop.
+5. Gunakan bahasa Indonesia yang jelas, ringkas, dan langsung pada inti penjelasan tanpa basa-basi berlebihan atau emoji berlebih.
+6. Format teks menggunakan Markdown yang rapi (bold, bullet points) agar mudah dan nyaman dibaca.
 `;
 
     // Format chat history for Gemini API

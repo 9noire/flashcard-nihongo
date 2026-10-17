@@ -42,9 +42,6 @@ export default function Home() {
           <h1 className="text-lg font-bold tracking-tight text-zinc-100 flex items-center gap-2">
             <span className="text-[#EEAAC0] font-japanese font-normal">言葉</span> Kotoba Flashcards
           </h1>
-          <span className="text-xs text-zinc-400 bg-zinc-900 px-2.5 py-1 rounded-full border border-zinc-800">
-            {lessons.length} Bab • {kotobaList.length} Kata
-          </span>
         </div>
 
         {/* Section 1: Import */}
