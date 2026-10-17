@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Bot, 
   Send, 
@@ -8,9 +9,11 @@ import {
   BookOpen, 
   ChevronDown, 
   ChevronUp, 
-  RotateCcw,
-  Copy,
-  Check
+  RotateCcw, 
+  Copy, 
+  Check,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +32,7 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
 }) => {
   const [selectedLessonScope, setSelectedLessonScope] = useState<number | 'all'>('all');
   const [isOpen, setIsOpen] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -51,23 +55,50 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fullscreenMessagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fullscreenTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Handle body overflow and escape key in fullscreen
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setIsFullscreen(false);
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isFullscreen]);
 
   // Auto-resize textarea height when typing or adding newlines via Shift+Enter
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      const newHeight = Math.min(Math.max(textareaRef.current.scrollHeight, 36), 160);
-      textareaRef.current.style.height = `${newHeight}px`;
-    }
-  }, [inputMessage]);
+    const adjustHeight = (el: HTMLTextAreaElement | null) => {
+      if (el) {
+        el.style.height = 'auto';
+        const newHeight = Math.min(Math.max(el.scrollHeight, 36), 160);
+        el.style.height = `${newHeight}px`;
+      }
+    };
+    adjustHeight(textareaRef.current);
+    adjustHeight(fullscreenTextareaRef.current);
+  }, [inputMessage, isFullscreen]);
 
   // Scroll to bottom on new message
   useEffect(() => {
-    if (isOpen) {
+    if (isFullscreen) {
+      fullscreenMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isLoading, isOpen]);
+  }, [messages, isLoading, isOpen, isFullscreen]);
 
   const handleSendMessage = async (customText?: string) => {
     const textToSend = (customText !== undefined ? customText : inputMessage).trim();
@@ -83,9 +114,10 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInputMessage('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = '36px';
-    }
+
+    if (textareaRef.current) textareaRef.current.style.height = '36px';
+    if (fullscreenTextareaRef.current) fullscreenTextareaRef.current.style.height = '36px';
+
     setIsLoading(true);
 
     try {
@@ -124,7 +156,11 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
     } finally {
       setIsLoading(false);
       setTimeout(() => {
-        textareaRef.current?.focus();
+        if (isFullscreen) {
+          fullscreenTextareaRef.current?.focus();
+        } else {
+          textareaRef.current?.focus();
+        }
       }, 100);
     }
   };
@@ -226,151 +262,247 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
     });
   };
 
-  return (
-    <Card className="overflow-hidden border-zinc-800 bg-zinc-900/60 shadow-lg">
-      <CardHeader className="flex flex-row items-center justify-between py-3 px-4 space-y-0 border-b border-zinc-800/60 bg-zinc-900/40">
-        <div className="flex items-center gap-2">
-          <Bot className="w-4 h-4 text-[#EEAAC0]" />
-          <CardTitle className="text-sm font-semibold text-zinc-100">
-            Tanya AI
-          </CardTitle>
-        </div>
+  // Reusable chat messages renderer
+  const renderChatMessages = (scrollRef: React.RefObject<HTMLDivElement | null>) => (
+    <div className="space-y-3">
+      {messages.map((msg) => {
+        const isAssistant = msg.role === 'assistant';
+        return (
+          <div
+            key={msg.id}
+            className={`flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}
+          >
+            <div className="mb-1 px-1 text-[10px] text-zinc-500 font-medium">
+              {isAssistant ? 'Asisten' : 'Kamu'}
+            </div>
 
-        {/* Controls */}
-        <div className="flex items-center gap-1.5 text-xs">
-          {/* Scope Selector */}
-          <div className="flex items-center gap-1 bg-zinc-950 px-2 py-1 rounded border border-zinc-800 text-[11px]">
-            <BookOpen className="w-3 h-3 text-zinc-400" />
-            <select
-              value={selectedLessonScope}
-              onChange={(e) =>
-                setSelectedLessonScope(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))
-              }
-              className="bg-transparent text-zinc-200 focus:outline-none cursor-pointer font-medium"
+            <div
+              className={`relative group max-w-[92%] sm:max-w-[85%] rounded-lg px-3.5 py-2.5 text-xs ${
+                isAssistant
+                  ? 'bg-zinc-900/90 border border-zinc-800 text-zinc-200'
+                  : 'bg-[#EEAAC0]/15 border border-[#EEAAC0]/30 text-zinc-100'
+              }`}
             >
-              <option value="all" className="bg-zinc-900">
-                Semua Bab
-              </option>
-              {lessons.map((l) => (
-                <option key={l.lessonId} value={l.lessonId} className="bg-zinc-900">
-                  Bab {l.lessonId}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-zinc-400 hover:text-zinc-100"
-            onClick={handleResetChat}
-            title="Reset Percakapan"
-          >
-            <RotateCcw className="w-3 h-3" />
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-zinc-400 hover:text-zinc-100"
-            onClick={() => setIsOpen(!isOpen)}
-            title={isOpen ? 'Ciutkan' : 'Buka'}
-          >
-            {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </Button>
-        </div>
-      </CardHeader>
-
-      {isOpen && (
-        <CardContent className="p-0 flex flex-col">
-          {/* Chat Messages Log */}
-          <div className="p-4 space-y-3 max-h-[360px] min-h-[160px] overflow-y-auto no-scrollbar">
-            {messages.map((msg) => {
-              const isAssistant = msg.role === 'assistant';
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col ${isAssistant ? 'items-start' : 'items-end'}`}
-                >
-                  <div className="mb-1 px-1 text-[10px] text-zinc-500 font-medium">
-                    {isAssistant ? 'Asisten' : 'Kamu'}
-                  </div>
-
-                  <div
-                    className={`relative group max-w-[92%] sm:max-w-[85%] rounded-lg px-3.5 py-2.5 text-xs ${
-                      isAssistant
-                        ? 'bg-zinc-900/90 border border-zinc-800 text-zinc-200'
-                        : 'bg-[#EEAAC0]/15 border border-[#EEAAC0]/30 text-zinc-100'
-                    }`}
-                  >
-                    <div className="text-zinc-200 text-xs">
-                      {renderFormattedContent(msg.content)}
-                    </div>
-
-                    {isAssistant && (
-                      <button
-                        onClick={() => handleCopyText(msg.id, msg.content)}
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all text-[10px]"
-                        title="Salin jawaban"
-                      >
-                        {copiedId === msg.id ? (
-                          <Check className="w-3 h-3 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {isLoading && (
-              <div className="flex flex-col items-start">
-                <div className="mb-1 px-1 text-[10px] text-zinc-500 font-medium">
-                  Asisten
-                </div>
-                <div className="rounded-lg px-3.5 py-2 bg-zinc-900/90 border border-zinc-800 text-zinc-400 text-xs flex items-center gap-2">
-                  <Loader2 className="w-3 h-3 animate-spin text-[#EEAAC0]" />
-                  <span>Mengetik...</span>
-                </div>
+              <div className="text-zinc-200 text-xs">
+                {renderFormattedContent(msg.content)}
               </div>
-            )}
 
-            <div ref={messagesEndRef} />
+              {isAssistant && (
+                <button
+                  onClick={() => handleCopyText(msg.id, msg.content)}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all text-[10px]"
+                  title="Salin jawaban"
+                >
+                  {copiedId === msg.id ? (
+                    <Check className="w-3 h-3 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {isLoading && (
+        <div className="flex flex-col items-start">
+          <div className="mb-1 px-1 text-[10px] text-zinc-500 font-medium">
+            Asisten
+          </div>
+          <div className="rounded-lg px-3.5 py-2 bg-zinc-900/90 border border-zinc-800 text-zinc-400 text-xs flex items-center gap-2">
+            <Loader2 className="w-3 h-3 animate-spin text-[#EEAAC0]" />
+            <span>Mengetik...</span>
+          </div>
+        </div>
+      )}
+
+      <div ref={scrollRef} />
+    </div>
+  );
+
+  // Reusable input form renderer
+  const renderInputBox = (inputRef: React.RefObject<HTMLTextAreaElement | null>) => (
+    <div className="relative flex items-end gap-2">
+      <textarea
+        ref={inputRef}
+        rows={1}
+        value={inputMessage}
+        onChange={(e) => setInputMessage(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Ketik pertanyaan..."
+        disabled={isLoading}
+        className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900/80 px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] focus:border-[#EEAAC0]/50 transition-[border,box-shadow] min-h-[36px] max-h-40 overflow-y-auto no-scrollbar leading-relaxed disabled:opacity-50"
+      />
+
+      <Button
+        variant="pink"
+        size="sm"
+        onClick={() => handleSendMessage()}
+        disabled={isLoading || !inputMessage.trim()}
+        className="h-9 px-3 shrink-0"
+      >
+        {isLoading ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Send className="w-3.5 h-3.5" />
+        )}
+      </Button>
+    </div>
+  );
+
+  return (
+    <>
+      <Card className="overflow-hidden border-zinc-800 bg-zinc-900/60 shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between py-3 px-4 space-y-0 border-b border-zinc-800/60 bg-zinc-900/40">
+          <div className="flex items-center gap-2">
+            <Bot className="w-4 h-4 text-[#EEAAC0]" />
+            <CardTitle className="text-sm font-semibold text-zinc-100">
+              Tanya AI
+            </CardTitle>
           </div>
 
-          {/* Input Chat Box */}
-          <div className="p-3 bg-zinc-950 border-t border-zinc-800/60">
-            <div className="relative flex items-end gap-2">
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ketik pertanyaan..."
-                disabled={isLoading}
-                className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900/80 px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] focus:border-[#EEAAC0]/50 transition-[border,box-shadow] min-h-[36px] max-h-40 overflow-y-auto no-scrollbar leading-relaxed disabled:opacity-50"
-              />
+          {/* Controls */}
+          <div className="flex items-center gap-1.5 text-xs">
+            {/* Scope Selector */}
+            <div className="flex items-center gap-1 bg-zinc-950 px-2 py-1 rounded border border-zinc-800 text-[11px]">
+              <BookOpen className="w-3 h-3 text-zinc-400" />
+              <select
+                value={selectedLessonScope}
+                onChange={(e) =>
+                  setSelectedLessonScope(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))
+                }
+                className="bg-transparent text-zinc-200 focus:outline-none cursor-pointer font-medium"
+              >
+                <option value="all" className="bg-zinc-900">
+                  Semua Bab
+                </option>
+                {lessons.map((l) => (
+                  <option key={l.lessonId} value={l.lessonId} className="bg-zinc-900">
+                    Bab {l.lessonId}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-zinc-400 hover:text-zinc-100"
+              onClick={handleResetChat}
+              title="Reset Percakapan"
+            >
+              <RotateCcw className="w-3 h-3" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-zinc-400 hover:text-zinc-100"
+              onClick={() => setIsFullscreen(true)}
+              title="Fullscreen Mode"
+            >
+              <Maximize2 className="w-3 h-3" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-zinc-400 hover:text-zinc-100"
+              onClick={() => setIsOpen(!isOpen)}
+              title={isOpen ? 'Ciutkan' : 'Buka'}
+            >
+              {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </Button>
+          </div>
+        </CardHeader>
+
+        {isOpen && (
+          <CardContent className="p-0 flex flex-col">
+            {/* Chat Messages Log */}
+            <div className="p-4 max-h-[360px] min-h-[160px] overflow-y-auto no-scrollbar">
+              {renderChatMessages(messagesEndRef)}
+            </div>
+
+            {/* Input Chat Box */}
+            <div className="p-3 bg-zinc-950 border-t border-zinc-800/60">
+              {renderInputBox(textareaRef)}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* FULLSCREEN AI ASSISTANT PORTAL */}
+      {isFullscreen && typeof window !== 'undefined' && createPortal(
+        <div
+          onKeyDown={(e) => e.stopPropagation()}
+          className="fixed inset-0 w-screen h-screen z-[99999] bg-zinc-950 flex flex-col justify-between p-4 sm:p-6 overflow-hidden"
+        >
+          {/* Top Header Bar */}
+          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3 shrink-0 max-w-2xl mx-auto w-full">
+            <div className="flex items-center gap-2">
+              <Bot className="w-4 h-4 text-[#EEAAC0]" />
+              <CardTitle className="text-sm font-semibold text-zinc-100">
+                Tanya AI
+              </CardTitle>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-1 bg-zinc-900 px-2.5 py-1 rounded border border-zinc-800 text-[11px]">
+                <BookOpen className="w-3 h-3 text-zinc-400" />
+                <select
+                  value={selectedLessonScope}
+                  onChange={(e) =>
+                    setSelectedLessonScope(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))
+                  }
+                  className="bg-transparent text-zinc-200 focus:outline-none cursor-pointer font-medium"
+                >
+                  <option value="all" className="bg-zinc-900">
+                    Semua Bab
+                  </option>
+                  {lessons.map((l) => (
+                    <option key={l.lessonId} value={l.lessonId} className="bg-zinc-900">
+                      Bab {l.lessonId}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <Button
-                variant="pink"
+                variant="outline"
                 size="sm"
-                onClick={() => handleSendMessage()}
-                disabled={isLoading || !inputMessage.trim()}
-                className="h-9 px-3 shrink-0"
+                className="h-7 px-2 text-zinc-400 hover:text-zinc-100"
+                onClick={handleResetChat}
+                title="Reset Percakapan"
               >
-                {isLoading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Send className="w-3.5 h-3.5" />
-                )}
+                <RotateCcw className="w-3 h-3" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsFullscreen(false)}
+                className="text-zinc-400 hover:text-zinc-100 flex items-center gap-1 h-7 px-2"
+                title="Keluar Fullscreen (Esc)"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span className="text-xs">Keluar</span>
               </Button>
             </div>
           </div>
-        </CardContent>
+
+          {/* Fullscreen Chat Messages Log */}
+          <div className="flex-1 max-w-2xl mx-auto w-full overflow-y-auto no-scrollbar py-4 px-1">
+            {renderChatMessages(fullscreenMessagesEndRef)}
+          </div>
+
+          {/* Fullscreen Input Chat Box */}
+          <div className="max-w-2xl mx-auto w-full pt-3 pb-1 border-t border-zinc-800/80 shrink-0">
+            {renderInputBox(fullscreenTextareaRef)}
+          </div>
+        </div>,
+        document.body
       )}
-    </Card>
+    </>
   );
 };
