@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ImportSection } from '@/components/ImportSection';
 import { FlashcardSection } from '@/components/FlashcardSection';
+import { AssistantSection } from '@/components/AssistantSection';
 import { Footer } from '@/components/Footer';
 
 import { Lesson, KotobaItem } from '@/types/kotoba';
@@ -41,6 +42,9 @@ export default function Home() {
           <h1 className="text-lg font-bold tracking-tight text-zinc-100 flex items-center gap-2">
             <span className="text-[#EEAAC0] font-japanese font-normal">言葉</span> Kotoba Flashcards
           </h1>
+          <span className="text-xs text-zinc-400 bg-zinc-900 px-2.5 py-1 rounded-full border border-zinc-800">
+            {lessons.length} Bab • {kotobaList.length} Kata
+          </span>
         </div>
 
         {/* Section 1: Import */}
@@ -52,6 +56,12 @@ export default function Home() {
           kotobaList={kotobaList}
           isLoading={isLoading}
           onDataChange={loadData}
+        />
+
+        {/* Section 3: AI Assistant */}
+        <AssistantSection
+          lessons={lessons}
+          kotobaList={kotobaList}
         />
 
       </main>

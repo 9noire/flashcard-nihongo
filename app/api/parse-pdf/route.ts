@@ -50,6 +50,7 @@ ${rawText.slice(0, 30000)}
 
     // Updated active models per Google Gemini API specification
     const models = [
+      'gemini-3.8-flash',
       'gemini-3.6-flash',
       'gemini-3.5-flash',
       'gemini-2.5-flash-lite',

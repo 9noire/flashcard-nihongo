@@ -17,3 +17,10 @@ export interface Lesson {
 
 export type CardFrontPreference = 'kana' | 'kanji' | 'arti';
 export type CardOrderPreference = 'sequential' | 'shuffled';
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
