@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { LessonMultiSelect } from '@/components/LessonMultiSelect';
 import { KotobaItem, Lesson, ChatMessage } from '@/types/kotoba';
 
 interface AssistantSectionProps {
@@ -30,20 +31,22 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
   lessons,
   kotobaList,
 }) => {
-  const [selectedLessonScope, setSelectedLessonScope] = useState<number | 'all'>('all');
+  const [selectedLessonScopes, setSelectedLessonScopes] = useState<number[]>([]);
   const [isOpen, setIsOpen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Filter kotoba based on selected scope
+  const isAllSelected = selectedLessonScopes.length === 0 || selectedLessonScopes.length === lessons.length;
+
+  // Filter kotoba based on selected multi-lesson scopes
   const activeVocab = useMemo(() => {
-    if (selectedLessonScope === 'all') {
+    if (isAllSelected) {
       return kotobaList;
     }
-    return kotobaList.filter((k) => k.lessonId === Number(selectedLessonScope));
-  }, [kotobaList, selectedLessonScope]);
+    return kotobaList.filter((k) => selectedLessonScopes.includes(k.lessonId));
+  }, [kotobaList, selectedLessonScopes, isAllSelected]);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
@@ -121,13 +124,17 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
     setIsLoading(true);
 
     try {
+      const scopeParam = isAllSelected
+        ? 'all'
+        : [...selectedLessonScopes].sort((a, b) => a - b).join(', ');
+
       const response = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
           kotobaList: activeVocab,
-          lessonScope: selectedLessonScope,
+          lessonScope: scopeParam,
         }),
       });
 
@@ -364,26 +371,12 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
 
           {/* Controls */}
           <div className="flex items-center gap-1.5 text-xs">
-            {/* Scope Selector */}
-            <div className="flex items-center gap-1 bg-zinc-950 px-2 py-1 rounded border border-zinc-800 text-[11px]">
-              <BookOpen className="w-3 h-3 text-zinc-400" />
-              <select
-                value={selectedLessonScope}
-                onChange={(e) =>
-                  setSelectedLessonScope(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))
-                }
-                className="bg-transparent text-zinc-200 focus:outline-none cursor-pointer font-medium"
-              >
-                <option value="all" className="bg-zinc-900">
-                  Semua Bab
-                </option>
-                {lessons.map((l) => (
-                  <option key={l.lessonId} value={l.lessonId} className="bg-zinc-900">
-                    Bab {l.lessonId}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Multi Lesson Selector */}
+            <LessonMultiSelect
+              lessons={lessons}
+              selectedLessonIds={selectedLessonScopes}
+              onChange={setSelectedLessonScopes}
+            />
 
             <Button
               variant="outline"
@@ -448,25 +441,11 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
             </div>
 
             <div className="flex items-center gap-2 text-xs">
-              <div className="flex items-center gap-1 bg-zinc-900 px-2.5 py-1 rounded border border-zinc-800 text-[11px]">
-                <BookOpen className="w-3 h-3 text-zinc-400" />
-                <select
-                  value={selectedLessonScope}
-                  onChange={(e) =>
-                    setSelectedLessonScope(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))
-                  }
-                  className="bg-transparent text-zinc-200 focus:outline-none cursor-pointer font-medium"
-                >
-                  <option value="all" className="bg-zinc-900">
-                    Semua Bab
-                  </option>
-                  {lessons.map((l) => (
-                    <option key={l.lessonId} value={l.lessonId} className="bg-zinc-900">
-                      Bab {l.lessonId}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <LessonMultiSelect
+                lessons={lessons}
+                selectedLessonIds={selectedLessonScopes}
+                onChange={setSelectedLessonScopes}
+              />
 
               <Button
                 variant="outline"

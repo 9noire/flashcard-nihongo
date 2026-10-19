@@ -16,6 +16,8 @@ import { FullscreenTableEditor } from '@/components/FullscreenTableEditor';
 import { CardViewer } from '@/components/CardViewer';
 import { saveKotobaBatch } from '@/lib/firestoreService';
 
+import { LessonMultiSelect } from '@/components/LessonMultiSelect';
+
 interface FlashcardSectionProps {
   lessons: Lesson[];
   kotobaList: KotobaItem[];
@@ -29,7 +31,7 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
   isLoading,
   onDataChange,
 }) => {
-  const [selectedLesson, setSelectedLesson] = useState<number | 'all'>('all');
+  const [selectedLessonIds, setSelectedLessonIds] = useState<number[]>([]);
   const [startNo, setStartNo] = useState<number>(1);
   const [endNo, setEndNo] = useState<number>(100);
   const [frontView, setFrontView] = useState<'kana' | 'kanji' | 'arti'>('kana');
@@ -47,23 +49,25 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
   const [editItems, setEditItems] = useState<Omit<KotobaItem, 'id'>[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  // Dynamic max available count based on selected lesson
+  const isAllSelected = selectedLessonIds.length === 0 || selectedLessonIds.length === lessons.length;
+
+  // Dynamic max available count based on selected lessons
   const maxAvailableCount = useMemo(() => {
-    if (selectedLesson === 'all') {
+    if (isAllSelected) {
       return kotobaList.length || 1;
     }
-    return kotobaList.filter((item) => item.lessonId === Number(selectedLesson)).length || 1;
-  }, [kotobaList, selectedLesson]);
+    return kotobaList.filter((item) => selectedLessonIds.includes(item.lessonId)).length || 1;
+  }, [kotobaList, selectedLessonIds, isAllSelected]);
 
   // Update default endNo when lesson or dataset changes
   useEffect(() => {
     setStartNo(1);
     setEndNo(maxAvailableCount);
-  }, [selectedLesson, maxAvailableCount]);
+  }, [selectedLessonIds, maxAvailableCount]);
 
   const activeDeckCards = useMemo(() => {
     let filtered = kotobaList.filter((item) => {
-      const matchLesson = selectedLesson === 'all' || item.lessonId === Number(selectedLesson);
+      const matchLesson = isAllSelected || selectedLessonIds.includes(item.lessonId);
       const matchRange = item.no >= startNo && item.no <= endNo;
       return matchLesson && matchRange;
     });
@@ -75,13 +79,13 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
     }
 
     return filtered;
-  }, [kotobaList, selectedLesson, startNo, endNo, isShuffled, shuffleKey]);
+  }, [kotobaList, selectedLessonIds, isAllSelected, startNo, endNo, isShuffled, shuffleKey]);
 
   useEffect(() => {
     setCurrentIndex(0);
     setIsFlipped(false);
     setSessionCompleted(false);
-  }, [selectedLesson, startNo, endNo, isShuffled, shuffleKey]);
+  }, [selectedLessonIds, startNo, endNo, isShuffled, shuffleKey]);
 
   useEffect(() => {
     setIsFlipped(false);
@@ -115,7 +119,7 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
   };
 
   const handleOpenEdit = () => {
-    const targetLesson = selectedLesson === 'all' ? (lessons[0]?.lessonId || 1) : Number(selectedLesson);
+    const targetLesson = selectedLessonIds.length === 1 ? selectedLessonIds[0] : (selectedLessonIds[0] || lessons[0]?.lessonId || 1);
     setEditLessonId(targetLesson);
     const existing = kotobaList.filter((item) => item.lessonId === targetLesson);
     setEditItems(existing.map((item) => ({ ...item })));
@@ -174,18 +178,11 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            <select
-              value={selectedLesson}
-              onChange={(e) => setSelectedLesson(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))}
-              className="h-7 rounded border border-zinc-800 bg-zinc-950 px-2 text-[11px] text-zinc-200 focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] font-medium"
-            >
-              <option value="all">Semua Bab</option>
-              {lessons.map((l) => (
-                <option key={l.lessonId} value={l.lessonId}>
-                  Bab {l.lessonId} ({l.totalCount})
-                </option>
-              ))}
-            </select>
+            <LessonMultiSelect
+              lessons={lessons}
+              selectedLessonIds={selectedLessonIds}
+              onChange={setSelectedLessonIds}
+            />
 
             <div className="flex items-center gap-1 h-7 rounded border border-zinc-800 bg-zinc-950 px-1.5 text-[11px]">
               <span className="text-zinc-500">No:</span>
