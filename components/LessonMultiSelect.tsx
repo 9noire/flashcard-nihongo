@@ -37,12 +37,12 @@ export const LessonMultiSelect: React.FC<LessonMultiSelectProps> = ({
 
   const allLessonIds = lessons.map((l) => l.lessonId);
   const isAllSelected =
-    selectedLessonIds.length === 0 ||
-    allLessonIds.every((id) => selectedLessonIds.includes(id));
+    lessons.length > 0 && selectedLessonIds.length === lessons.length;
 
   // Determine button trigger display label
   const getLabel = () => {
     if (lessons.length === 0) return 'Tidak ada bab';
+    if (selectedLessonIds.length === 0) return 'Pilih Bab';
     if (isAllSelected) return 'Semua Bab';
     if (selectedLessonIds.length === 1) return `Bab ${selectedLessonIds[0]}`;
     if (selectedLessonIds.length <= 3) {
@@ -52,32 +52,19 @@ export const LessonMultiSelect: React.FC<LessonMultiSelectProps> = ({
     return `${selectedLessonIds.length} Bab dipilih`;
   };
 
-  const handleToggleAll = () => {
-    if (isAllSelected) {
-      // If already all selected, clear selection (or keep none)
-      onChange([]);
-    } else {
-      // Select all
-      onChange(allLessonIds);
-    }
+  const handleSelectAll = () => {
+    onChange(allLessonIds);
+  };
+
+  const handleDeselectAll = () => {
+    onChange([]);
   };
 
   const handleToggleLesson = (lessonId: number) => {
-    if (isAllSelected) {
-      // Transition from "all" to specifically all except this one
-      const newSelection = allLessonIds.filter((id) => id !== lessonId);
-      onChange(newSelection);
-    } else if (selectedLessonIds.includes(lessonId)) {
-      const newSelection = selectedLessonIds.filter((id) => id !== lessonId);
-      onChange(newSelection);
+    if (selectedLessonIds.includes(lessonId)) {
+      onChange(selectedLessonIds.filter((id) => id !== lessonId));
     } else {
-      const newSelection = [...selectedLessonIds, lessonId];
-      // If user selected every lesson, treat as all
-      if (newSelection.length === allLessonIds.length) {
-        onChange(allLessonIds);
-      } else {
-        onChange(newSelection);
-      }
+      onChange([...selectedLessonIds, lessonId]);
     }
   };
 
@@ -87,7 +74,7 @@ export const LessonMultiSelect: React.FC<LessonMultiSelectProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="h-7 flex items-center gap-1.5 rounded border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 px-2 text-[11px] text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] font-medium"
+        className="h-7 flex items-center gap-1.5 rounded border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 px-2 text-[11px] text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] font-medium cursor-pointer"
       >
         <BookOpen className="w-3 h-3 text-zinc-400 shrink-0" />
         <span className="truncate max-w-[130px]">{getLabel()}</span>
@@ -96,17 +83,27 @@ export const LessonMultiSelect: React.FC<LessonMultiSelectProps> = ({
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 mt-1 w-52 rounded-lg border border-zinc-800 bg-zinc-950 p-1.5 shadow-2xl z-50">
-          {/* Header Action: Select All / Clear */}
+        <div className="absolute left-0 mt-1 w-56 rounded-lg border border-zinc-800 bg-zinc-950 p-1.5 shadow-2xl z-50">
+          {/* Header Actions: Pilih Semua & Batal Semua */}
           <div className="flex items-center justify-between pb-1.5 mb-1 px-1 border-b border-zinc-800/60 text-[10px]">
             <span className="text-zinc-500 font-medium">Pilih Bab</span>
-            <button
-              type="button"
-              onClick={handleToggleAll}
-              className="text-[#EEAAC0] hover:underline cursor-pointer"
-            >
-              {isAllSelected ? 'Batal Semua' : 'Pilih Semua'}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleSelectAll}
+                className="text-[#EEAAC0] hover:underline cursor-pointer"
+              >
+                Pilih Semua
+              </button>
+              <span className="text-zinc-700">•</span>
+              <button
+                type="button"
+                onClick={handleDeselectAll}
+                className="text-zinc-400 hover:text-rose-400 hover:underline cursor-pointer"
+              >
+                Batal Semua
+              </button>
+            </div>
           </div>
 
           {/* List of Lessons */}
@@ -117,7 +114,7 @@ export const LessonMultiSelect: React.FC<LessonMultiSelectProps> = ({
               </div>
             ) : (
               lessons.map((lesson) => {
-                const checked = isAllSelected || selectedLessonIds.includes(lesson.lessonId);
+                const checked = selectedLessonIds.includes(lesson.lessonId);
                 return (
                   <label
                     key={lesson.lessonId}

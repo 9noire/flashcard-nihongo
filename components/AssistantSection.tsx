@@ -32,21 +32,28 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
   kotobaList,
 }) => {
   const [selectedLessonScopes, setSelectedLessonScopes] = useState<number[]>([]);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const isAllSelected = selectedLessonScopes.length === 0 || selectedLessonScopes.length === lessons.length;
+  // Initialize selected scopes to all lessons when lessons first load
+  useEffect(() => {
+    if (!hasInitialized && lessons.length > 0) {
+      setSelectedLessonScopes(lessons.map((l) => l.lessonId));
+      setHasInitialized(true);
+    }
+  }, [lessons, hasInitialized]);
 
   // Filter kotoba based on selected multi-lesson scopes
   const activeVocab = useMemo(() => {
-    if (isAllSelected) {
-      return kotobaList;
+    if (selectedLessonScopes.length === 0) {
+      return [];
     }
     return kotobaList.filter((k) => selectedLessonScopes.includes(k.lessonId));
-  }, [kotobaList, selectedLessonScopes, isAllSelected]);
+  }, [kotobaList, selectedLessonScopes]);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
@@ -124,8 +131,11 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
     setIsLoading(true);
 
     try {
+      const isAllSelected = lessons.length > 0 && selectedLessonScopes.length === lessons.length;
       const scopeParam = isAllSelected
         ? 'all'
+        : selectedLessonScopes.length === 0
+        ? 'none'
         : [...selectedLessonScopes].sort((a, b) => a - b).join(', ');
 
       const response = await fetch('/api/assistant', {
@@ -337,8 +347,12 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
         value={inputMessage}
         onChange={(e) => setInputMessage(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Ketik pertanyaan..."
-        disabled={isLoading}
+        placeholder={
+          activeVocab.length === 0
+            ? 'Pilih minimal satu bab untuk bertanya...'
+            : 'Ketik pertanyaan...'
+        }
+        disabled={isLoading || activeVocab.length === 0}
         className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900/80 px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] focus:border-[#EEAAC0]/50 transition-[border,box-shadow] min-h-[36px] max-h-40 overflow-y-auto no-scrollbar leading-relaxed disabled:opacity-50"
       />
 
@@ -346,7 +360,7 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
         variant="pink"
         size="sm"
         onClick={() => handleSendMessage()}
-        disabled={isLoading || !inputMessage.trim()}
+        disabled={isLoading || !inputMessage.trim() || activeVocab.length === 0}
         className="h-9 px-3 shrink-0"
       >
         {isLoading ? (

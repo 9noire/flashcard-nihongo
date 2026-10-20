@@ -32,6 +32,7 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
   onDataChange,
 }) => {
   const [selectedLessonIds, setSelectedLessonIds] = useState<number[]>([]);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [startNo, setStartNo] = useState<number>(1);
   const [endNo, setEndNo] = useState<number>(100);
   const [frontView, setFrontView] = useState<'kana' | 'kanji' | 'arti'>('kana');
@@ -43,21 +44,27 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
 
+  // Initialize selected lessons to all lessons when lessons first load
+  useEffect(() => {
+    if (!hasInitialized && lessons.length > 0) {
+      setSelectedLessonIds(lessons.map((l) => l.lessonId));
+      setHasInitialized(true);
+    }
+  }, [lessons, hasInitialized]);
+
   // Edit DB state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editLessonId, setEditLessonId] = useState<number>(1);
   const [editItems, setEditItems] = useState<Omit<KotobaItem, 'id'>[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  const isAllSelected = selectedLessonIds.length === 0 || selectedLessonIds.length === lessons.length;
-
   // Dynamic max available count based on selected lessons
   const maxAvailableCount = useMemo(() => {
-    if (isAllSelected) {
-      return kotobaList.length || 1;
+    if (selectedLessonIds.length === 0) {
+      return 1;
     }
     return kotobaList.filter((item) => selectedLessonIds.includes(item.lessonId)).length || 1;
-  }, [kotobaList, selectedLessonIds, isAllSelected]);
+  }, [kotobaList, selectedLessonIds]);
 
   // Update default endNo when lesson or dataset changes
   useEffect(() => {
@@ -66,8 +73,12 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
   }, [selectedLessonIds, maxAvailableCount]);
 
   const activeDeckCards = useMemo(() => {
+    if (selectedLessonIds.length === 0) {
+      return [];
+    }
+
     let filtered = kotobaList.filter((item) => {
-      const matchLesson = isAllSelected || selectedLessonIds.includes(item.lessonId);
+      const matchLesson = selectedLessonIds.includes(item.lessonId);
       const matchRange = item.no >= startNo && item.no <= endNo;
       return matchLesson && matchRange;
     });
@@ -79,7 +90,7 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
     }
 
     return filtered;
-  }, [kotobaList, selectedLessonIds, isAllSelected, startNo, endNo, isShuffled, shuffleKey]);
+  }, [kotobaList, selectedLessonIds, startNo, endNo, isShuffled, shuffleKey]);
 
   useEffect(() => {
     setCurrentIndex(0);
@@ -237,7 +248,7 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
               size="sm"
               className="h-7 px-2 text-zinc-300 hover:text-zinc-100"
               onClick={handleOpenEdit}
-              disabled={kotobaList.length === 0}
+              disabled={kotobaList.length === 0 || selectedLessonIds.length === 0}
               title="Edit Data Kosakata"
             >
               <Pencil className="w-3 h-3" />
@@ -264,7 +275,9 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
             </div>
           ) : activeDeckCards.length === 0 ? (
             <div className="py-14 text-center text-zinc-500 text-xs border border-dashed border-zinc-800 rounded-lg">
-              Belum ada data kosakata. Silakan import PDF di atas.
+              {kotobaList.length === 0
+                ? 'Belum ada data kosakata. Silakan import PDF di atas.'
+                : 'Tidak ada bab yang dipilih. Silakan centang bab yang ingin dipelajari.'}
             </div>
           ) : (
             /* Shared CardViewer Component */
