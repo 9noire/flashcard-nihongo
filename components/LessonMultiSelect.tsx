@@ -69,7 +69,7 @@ export const LessonMultiSelect: React.FC<LessonMultiSelectProps> = ({
   };
 
   return (
-    <div ref={containerRef} className={`relative inline-block text-xs ${className}`}>
+    <div ref={containerRef} className={`relative inline-block text-xs ${isOpen ? 'z-50' : 'z-auto'} ${className}`}>
       {/* Trigger Button */}
       <button
         type="button"

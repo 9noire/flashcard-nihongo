@@ -374,7 +374,7 @@ export const AssistantSection: React.FC<AssistantSectionProps> = ({
 
   return (
     <>
-      <Card className="overflow-hidden border-zinc-800 bg-zinc-900/60 shadow-lg">
+      <Card className="relative z-10 border-zinc-800 bg-zinc-900/60 shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between py-3 px-4 space-y-0 border-b border-zinc-800/60 bg-zinc-900/40">
           <div className="flex items-center gap-2">
             <Bot className="w-4 h-4 text-[#EEAAC0]" />

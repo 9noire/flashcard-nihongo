@@ -180,7 +180,7 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
 
   return (
     <>
-      <Card>
+      <Card className="relative z-20">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 py-3.5 px-4 space-y-0 border-b border-zinc-800/60">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-[#EEAAC0]" />

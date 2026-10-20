@@ -48,18 +48,22 @@ export default function Home() {
         <ImportSection onImportSuccess={() => loadData()} />
 
         {/* Section 2: Flashcards */}
-        <FlashcardSection
-          lessons={lessons}
-          kotobaList={kotobaList}
-          isLoading={isLoading}
-          onDataChange={loadData}
-        />
+        <div className="relative z-20">
+          <FlashcardSection
+            lessons={lessons}
+            kotobaList={kotobaList}
+            isLoading={isLoading}
+            onDataChange={loadData}
+          />
+        </div>
 
         {/* Section 3: AI Assistant */}
-        <AssistantSection
-          lessons={lessons}
-          kotobaList={kotobaList}
-        />
+        <div className="relative z-10">
+          <AssistantSection
+            lessons={lessons}
+            kotobaList={kotobaList}
+          />
+        </div>
 
       </main>
 
