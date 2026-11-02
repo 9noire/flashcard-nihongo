@@ -63,7 +63,10 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
     if (selectedLessonIds.length === 0) {
       return 1;
     }
-    return kotobaList.filter((item) => selectedLessonIds.includes(item.lessonId)).length || 1;
+    const filtered = kotobaList.filter((item) => selectedLessonIds.includes(item.lessonId));
+    if (filtered.length === 0) return 1;
+    const maxNo = Math.max(...filtered.map((item) => Number(item.no) || 0));
+    return Math.max(filtered.length, maxNo);
   }, [kotobaList, selectedLessonIds]);
 
   // Update default endNo when lesson or dataset changes
@@ -102,6 +105,12 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
     setIsFlipped(false);
   }, [currentIndex]);
 
+  useEffect(() => {
+    if (currentIndex >= activeDeckCards.length && activeDeckCards.length > 0) {
+      setCurrentIndex(activeDeckCards.length - 1);
+    }
+  }, [activeDeckCards.length, currentIndex]);
+
   const currentCard = activeDeckCards[currentIndex];
 
   const handleNext = () => {
@@ -130,11 +139,17 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
   };
 
   const handleOpenEdit = () => {
-    const targetLesson = selectedLessonIds.length === 1 ? selectedLessonIds[0] : (selectedLessonIds[0] || lessons[0]?.lessonId || 1);
+    const targetLesson = currentCard?.lessonId || (selectedLessonIds.length > 0 ? selectedLessonIds[0] : (lessons[0]?.lessonId || 1));
     setEditLessonId(targetLesson);
     const existing = kotobaList.filter((item) => item.lessonId === targetLesson);
     setEditItems(existing.map((item) => ({ ...item })));
     setIsEditModalOpen(true);
+  };
+
+  const handleLessonChangeInEdit = (newLessonId: number) => {
+    setEditLessonId(newLessonId);
+    const existing = kotobaList.filter((item) => item.lessonId === newLessonId);
+    setEditItems(existing.map((item) => ({ ...item })));
   };
 
   const handleSaveEditToDb = async () => {
@@ -143,7 +158,7 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
       const finalItems = editItems.map((item, idx) => ({
         ...item,
         lessonId: editLessonId,
-        no: item.no || idx + 1,
+        no: Number(item.no) || idx + 1,
       }));
       await saveKotobaBatch(editLessonId, finalItems);
       setIsEditModalOpen(false);
@@ -307,6 +322,8 @@ export const FlashcardSection: React.FC<FlashcardSectionProps> = ({
         onItemsChange={setEditItems}
         onSave={handleSaveEditToDb}
         isSaving={isSavingEdit}
+        availableLessons={lessons}
+        onLessonChange={handleLessonChangeInEdit}
       />
 
       {/* FULLSCREEN FLASHCARD STUDY MODE PORTAL */}

@@ -6,7 +6,8 @@ import {
   query,
   where,
   orderBy,
-  writeBatch
+  writeBatch,
+  WriteBatch
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { KotobaItem, Lesson } from '@/types/kotoba';
@@ -98,12 +99,16 @@ export async function fetchKotobaByLessons(lessonIds: number[]): Promise<KotobaI
 }
 
 export async function saveKotobaBatch(lessonId: number, items: Omit<KotobaItem, 'id'>[]): Promise<void> {
-  const preparedItems: KotobaItem[] = items.map((item) => ({
-    ...item,
-    id: `${lessonId}_${item.no}`,
-    lessonId,
-    updatedAt: Date.now(),
-  }));
+  const preparedItems: KotobaItem[] = items.map((item, idx) => {
+    const no = Number(item.no) || idx + 1;
+    return {
+      ...item,
+      id: `${lessonId}_${no}`,
+      lessonId,
+      no,
+      updatedAt: Date.now(),
+    };
+  });
 
   // Update Local Storage
   const localAll = getLocalKotoba().filter((k) => k.lessonId !== lessonId);
@@ -122,21 +127,46 @@ export async function saveKotobaBatch(lessonId: number, items: Omit<KotobaItem, 
   if (!isFirebaseConfigured || !db) return;
 
   try {
-    const batch = writeBatch(db);
+    // 1. Query all existing kotoba docs for this lesson in Firestore
+    const existingSnapshot = await getDocs(
+      query(collection(db, 'kotoba'), where('lessonId', '==', lessonId))
+    );
+
+    const newDocIds = new Set(preparedItems.map((item) => item.id));
+
+    // 2. Identify docs that exist in Firestore but are NOT in the new preparedItems list
+    const docsToDelete = existingSnapshot.docs.filter((docSnap) => !newDocIds.has(docSnap.id));
+
+    const operations: ((batch: WriteBatch) => void)[] = [];
 
     // Lesson Doc
     const lessonRef = doc(db, 'lessons', `lesson_${lessonId}`);
-    batch.set(lessonRef, newLesson);
+    operations.push((batch) => batch.set(lessonRef, newLesson));
 
-    // Kotoba Docs
-    for (const item of preparedItems) {
-      const itemRef = doc(db, 'kotoba', item.id);
-      batch.set(itemRef, item);
+    // Delete removed Kotoba Docs
+    for (const docSnap of docsToDelete) {
+      operations.push((batch) => batch.delete(docSnap.ref));
     }
 
-    await batch.commit();
+    // Set updated Kotoba Docs
+    for (const item of preparedItems) {
+      const itemRef = doc(db, 'kotoba', item.id);
+      operations.push((batch) => batch.set(itemRef, item));
+    }
+
+    // Commit batches in chunks (max 500 ops per Firestore batch)
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+      const chunk = operations.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+      for (const op of chunk) {
+        op(batch);
+      }
+      await batch.commit();
+    }
   } catch (error) {
     console.error('Firestore batch save error:', error);
+    throw error;
   }
 }
 
@@ -152,14 +182,28 @@ export async function deleteLesson(lessonId: number): Promise<void> {
 
   try {
     // Delete lesson doc
-    await deleteDoc(doc(db, 'lessons', `lesson_${lessonId}`));
+    const lessonRef = doc(db, 'lessons', `lesson_${lessonId}`);
 
     // Delete kotoba docs for this lesson
     const snapshot = await getDocs(query(collection(db, 'kotoba'), where('lessonId', '==', lessonId)));
-    const batch = writeBatch(db);
-    snapshot.docs.forEach((docSnap) => batch.delete(docSnap.ref));
-    await batch.commit();
+    
+    const operations: ((batch: WriteBatch) => void)[] = [];
+    operations.push((batch) => batch.delete(lessonRef));
+    for (const docSnap of snapshot.docs) {
+      operations.push((batch) => batch.delete(docSnap.ref));
+    }
+
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+      const chunk = operations.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+      for (const op of chunk) {
+        op(batch);
+      }
+      await batch.commit();
+    }
   } catch (error) {
     console.error('Firestore delete lesson error:', error);
+    throw error;
   }
 }

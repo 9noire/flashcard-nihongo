@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Save, Plus, Trash2, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { KotobaItem } from '@/types/kotoba';
+import { KotobaItem, Lesson } from '@/types/kotoba';
 
 interface FullscreenTableEditorProps {
   isOpen: boolean;
@@ -15,6 +15,8 @@ interface FullscreenTableEditorProps {
   onItemsChange: (items: Omit<KotobaItem, 'id'>[]) => void;
   onSave: () => void;
   isSaving: boolean;
+  availableLessons?: Lesson[];
+  onLessonChange?: (lessonId: number) => void;
 }
 
 export const FullscreenTableEditor: React.FC<FullscreenTableEditorProps> = ({
@@ -25,6 +27,8 @@ export const FullscreenTableEditor: React.FC<FullscreenTableEditorProps> = ({
   onItemsChange,
   onSave,
   isSaving,
+  availableLessons,
+  onLessonChange,
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -53,7 +57,12 @@ export const FullscreenTableEditor: React.FC<FullscreenTableEditorProps> = ({
   };
 
   const handleDeleteRow = (index: number) => {
-    onItemsChange(items.filter((_, i) => i !== index));
+    const updated = items.filter((_, i) => i !== index);
+    const renumbered = updated.map((item, idx) => ({
+      ...item,
+      no: idx + 1,
+    }));
+    onItemsChange(renumbered);
   };
 
   return createPortal(
@@ -63,9 +72,26 @@ export const FullscreenTableEditor: React.FC<FullscreenTableEditorProps> = ({
     >
       {/* Modal Header */}
       <div className="flex items-center justify-between pb-3 border-b border-zinc-800 shrink-0 gap-2">
-        <h2 className="text-sm sm:text-base font-bold text-zinc-100 flex items-center gap-2">
-          Edit Tabel (Bab {lessonId})
-        </h2>
+        {availableLessons && availableLessons.length > 1 && onLessonChange ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm sm:text-base font-bold text-zinc-100">Edit Tabel:</span>
+            <select
+              value={lessonId}
+              onChange={(e) => onLessonChange(Number(e.target.value))}
+              className="h-8 rounded border border-zinc-800 bg-zinc-900 px-2 text-xs font-semibold text-[#EEAAC0] focus:outline-none focus:ring-1 focus:ring-[#EEAAC0] cursor-pointer"
+            >
+              {availableLessons.map((l) => (
+                <option key={l.lessonId} value={l.lessonId} className="bg-zinc-950 text-zinc-100">
+                  Bab {l.lessonId} ({l.totalCount} kata)
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <h2 className="text-sm sm:text-base font-bold text-zinc-100 flex items-center gap-2">
+            Edit Tabel (Bab {lessonId})
+          </h2>
+        )}
 
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleAddRow}>
